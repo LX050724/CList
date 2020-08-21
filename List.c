@@ -6,7 +6,7 @@ extern "C" {
 
 	List_StatusTypeDef List_Creat(List_HandleTypeDef* List_Handle, size_t Size)
 	{
-		if (Size)List_Handle->Size = Size;
+		if (Size && List_Handle)List_Handle->Size = Size;
 		else return List_ERROR;
 		List_Handle->New = (Nodep)List_malloc(sizeof(Node));
 		if (List_Handle->New == NULL)return List_ERROR;
@@ -38,7 +38,7 @@ extern "C" {
 
 	List_StatusTypeDef List_copy(List_HandleTypeDef* Dst_List_Handle, List_HandleTypeDef* Src_List_Handle)
 	{
-		if (Dst_List_Handle->Len != 0)return List_ERROR;
+		if(!List_Creat(Dst_List_Handle, Src_List_Handle->Size)) return List_ERROR;
 		List_iteratorTypeDef it;
 		List_iterator_Init(&it, Src_List_Handle);
 		do {
@@ -71,8 +71,8 @@ extern "C" {
 				List_iterator->Handle->Len--;
 				List_free(temp->Data);
 				List_free(temp);
-				return List_OK;
 			}
+			return List_OK;	
 		}
 		return List_ERROR;
 	}
@@ -96,11 +96,20 @@ extern "C" {
 
 	List_StatusTypeDef List_remove_if(List_HandleTypeDef* List_Handle, unsigned char(*CallBack)(void*))
 	{
+		if(List_Handle->Len == 0)
+			return List_OK;
 		List_iteratorTypeDef it;
+		void* t = NULL;
 		if (!List_iterator_Init(&it, List_Handle))return List_ERROR;
 		do {
-			if (CallBack(List_iterator_read(&it)))
+		c:
+			t = List_iterator_read(&it);
+			if(t == NULL)
+				return List_OK;
+			if (CallBack(t)) {
 				List_iterator_erase(&it);
+				goto c;
+			}
 		} while (List_iterator_mov_back(&it));
 		return List_OK;
 	}
